@@ -108,7 +108,7 @@ with tab1:
         for img_id in filtered["ID"]:
             file_path = f"assets/{img_id}.png"
             if os.path.exists(file_path):
-                st.image(file_path, width=700)
+                st.image(file_path, width=1200)
             else:
                 st.write(f"Missing image: {img_id}.png")
 
