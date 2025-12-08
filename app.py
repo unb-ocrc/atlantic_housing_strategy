@@ -136,7 +136,7 @@ with tab2:
         st.markdown("""
         <style>
         /* Adjust column widths */
-        #custom_table th:nth-child(1), #custom_table td:nth-child(1) { width: 50px; }     /* ID */
+        #custom_table th:nth-child(1), #custom_table td:nth-child(1) { width: 70px; }     /* ID */
         #custom_table th:nth-child(2), #custom_table td:nth-child(2) { width: 450px; }    /* Initiative (wider) */
         #custom_table th:nth-child(3), #custom_table td:nth-child(3) { width: 175px; }    /* Category (narrower) */
         #custom_table th:nth-child(4), #custom_table td:nth-child(4) { width: 175px; }    /* Location Identified (narrower) */
