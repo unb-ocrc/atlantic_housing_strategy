@@ -24,7 +24,7 @@ st.markdown(
 )
 
 #load data
-df = pd.read_excel("2025-11-13_Workshop barrier summary.xlsx", sheet_name="Sheet1")
+df = pd.read_excel("2025-12-12 Updated Summary Sheet.xlsx", sheet_name="Sheet1")
 
 def extract_tokens(cell):
     if pd.isna(cell):
@@ -67,7 +67,7 @@ def filter_df():
         ]
     if st.session_state.stakeholder_filter:
         filtered = filtered[
-            filtered["Filtering-Stakeholder-Categories"].apply(
+            filtered["Filtering-Contributors-Categories"].apply(
                 lambda cell: any(s in extract_tokens(cell) for s in st.session_state.stakeholder_filter)
             )
         ]
@@ -85,14 +85,14 @@ st.session_state.subcategory_filter = [sc for sc in st.session_state.subcategory
 location_options = sorted({loc for cell in filtered_for_options["Location Identified"] for loc in extract_tokens(cell)})
 st.session_state.location_filter = [l for l in st.session_state.location_filter if l in location_options]
 
-stakeholder_options = sorted({s for cell in filtered_for_options["Filtering-Stakeholder-Categories"] for s in extract_tokens(cell)})
+stakeholder_options = sorted({s for cell in filtered_for_options["Filtering-Contributors-Categories"] for s in extract_tokens(cell)})
 st.session_state.stakeholder_filter = [s for s in st.session_state.stakeholder_filter if s in stakeholder_options]
 
 # multiselect
 category_filter = st.sidebar.multiselect("Category", options=category_options, key="category_filter")
 subcategory_filter = st.sidebar.multiselect("Subcategory", options=subcategory_options, key="subcategory_filter")
 location_filter = st.sidebar.multiselect("Location Identified", options=location_options, key="location_filter")
-stakeholder_filter = st.sidebar.multiselect("Stakeholder/Owner Category", options=stakeholder_options, key="stakeholder_filter")
+stakeholder_filter = st.sidebar.multiselect("Contributor/Owner Category", options=stakeholder_options, key="stakeholder_filter")
 
 # filter for display
 filtered = filter_df()
@@ -120,11 +120,11 @@ with tab2:
     if filtered.empty:
         st.write("No initiatives match your filters.")
     else:
-        display_cols = ["ID", "Opportunities/ Initiative", "Category", "Location Identified"]
+        display_cols = ["ID", "Updated Initiative", "Category", "Location Identified"]
         filtered_subset = filtered[display_cols].copy()
 
         #  newline characters with <br> for HTML line breaks
-        filtered_subset["Opportunities/ Initiative"] = filtered_subset["Opportunities/ Initiative"].str.replace("\n", "<br>")
+        filtered_subset["Updated Initiative"] = filtered_subset["Updated Initiative"].str.replace("\n", "<br>")
 
         # convert df to html
         st.markdown(
