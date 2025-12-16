@@ -20,11 +20,17 @@ st.markdown(
 )
 
 # ---------------- Load Data ----------------
-df = pd.read_excel("2025-12-12 Updated Summary Sheet.xlsx", sheet_name="Sheet1")
-df["Expected Timeline"] = df["Expected Timeline"].astype(str)
-df = df.rename(
-    columns={"Updated Initiative": "Initiative"}
-)
+@st.cache_data(show_spinner=False)
+def load_data():
+    df = pd.read_excel(
+        "2025-12-12 Updated Summary Sheet.xlsx",
+        sheet_name="Sheet1"
+    )
+    df["Expected Timeline"] = df["Expected Timeline"].astype(str)
+    df = df.rename(columns={"Updated Initiative": "Initiative"})
+    return df
+
+df = load_data()
 
 def extract_tokens(cell):
     if pd.isna(cell):
