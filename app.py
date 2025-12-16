@@ -22,6 +22,9 @@ st.markdown(
 # ---------------- Load Data ----------------
 df = pd.read_excel("2025-12-12 Updated Summary Sheet.xlsx", sheet_name="Sheet1")
 df["Expected Timeline"] = df["Expected Timeline"].astype(str)
+df = df.rename(
+    columns={"Updated Initiative": "Initiative"}
+)
 
 def extract_tokens(cell):
     if pd.isna(cell):
@@ -205,7 +208,7 @@ with tab2:
     else:
         display_cols = [
             "ID",
-            "Updated Initiative",
+            "Initiative",
             "Category",
             "Location Identified",
             "Expected Timeline",  # OPTIONAL display
@@ -213,8 +216,8 @@ with tab2:
 
         filtered_subset = filtered[display_cols].copy()
 
-        filtered_subset["Updated Initiative"] = (
-            filtered_subset["Updated Initiative"]
+        filtered_subset["Initiative"] = (
+            filtered_subset["Initiative"]
             .str.replace("\n", "<br>")
         )
 
