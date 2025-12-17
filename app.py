@@ -44,7 +44,7 @@ def preprocess_tokens(df):
 @st.cache_data(show_spinner=False)
 def render_initiatives_html(df_subset):
     df_copy = df_subset.copy()
-    df_copy["Updated Initiative"] = df_copy["Initiative"].str.replace("\n", "<br>")
+    df_copy["Initiative"] = df_copy["Initiative"].str.replace("\n", "<br>")
     return df_copy.to_html(index=False, table_id="custom_table", escape=False)
 
 # --- Cached baseline initiatives HTML (NO FILTERS) ---
