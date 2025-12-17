@@ -2,19 +2,15 @@ import streamlit as st
 import pandas as pd
 import os
 
-
-
 st.set_page_config(layout="wide")  
 
-#sidebar
+# Sidebar
 st.markdown(
     """
     <style>
-    /* Make the sidebar wider */
     [data-testid="stSidebar"] {
         width: 350px;
     }
-    /* Make multiselect dropdowns wider inside the sidebar */
     [data-baseweb="select"] {
         min-width: 300px;
     }
@@ -23,16 +19,38 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-#load data
-df = pd.read_excel("2025-12-12 Updated Summary Sheet.xlsx", sheet_name="Sheet1")
+# --- Preprocess tokens and check images ---
+@st.cache_data(show_spinner=False)
+def preprocess_tokens(df):
+    df = df.copy()
+    df["location_tokens"] = df["Location Identified"].apply(
+        lambda cell: [part.strip() for part in str(cell).split(",") if part.strip() != ""]
+    )
+    df["stakeholder_tokens"] = df["Filtering-Contributors-Categories"].apply(
+        lambda cell: [part.strip() for part in str(cell).split(",") if part.strip() != ""]
+    )
+    df["has_image"] = df["ID"].apply(lambda x: os.path.exists(f"assets/{x}.png"))
+    return df[df["has_image"]]
 
-def extract_tokens(cell):
-    if pd.isna(cell):
-        return []
-    return [part.strip() for part in str(cell).split(",") if part.strip() != ""]
+# --- Cached HTML table rendering ---
+@st.cache_data(show_spinner=False)
+def render_initiatives_html(df_subset):
+    df_copy = df_subset.copy()
+    df_copy["Updated Initiative"] = df_copy["Updated Initiative"].str.replace("\n", "<br>")
+    return df_copy.to_html(index=False, table_id="custom_table", escape=False)
 
-# Only consider rows with existing images
-df = df[df["ID"].apply(lambda x: os.path.exists(f"assets/{x}.png"))].copy()
+# Load data
+@st.cache_data(show_spinner=False)
+def load_excel():
+    return pd.read_excel(
+        "2025-12-12 Updated Summary Sheet.xlsx",
+        sheet_name="Sheet1"
+    )
+
+df_raw = load_excel()
+
+
+df = preprocess_tokens(df_raw)
 
 st.title("Atlantic Housing Innovation Strategy")
 
@@ -40,7 +58,6 @@ st.title("Atlantic Housing Innovation Strategy")
 for key in ["category_filter", "subcategory_filter", "location_filter", "stakeholder_filter"]:
     if key not in st.session_state:
         st.session_state[key] = []
-
 
 st.sidebar.header("Filters")
 
@@ -52,7 +69,7 @@ def reset_filters():
 
 st.sidebar.button("Reset Filters", on_click=reset_filters)
 
-#filter logic
+# Filter logic using preprocessed tokens
 def filter_df():
     filtered = df.copy()
     if st.session_state.category_filter:
@@ -60,20 +77,14 @@ def filter_df():
     if st.session_state.subcategory_filter:
         filtered = filtered[filtered["Sub-Category"].isin(st.session_state.subcategory_filter)]
     if st.session_state.location_filter:
-        filtered = filtered[
-            filtered["Location Identified"].apply(
-                lambda cell: any(loc in extract_tokens(cell) for loc in st.session_state.location_filter)
-            )
-        ]
+        selected = set(st.session_state.location_filter)
+        filtered = filtered[filtered["location_tokens"].apply(lambda tokens: bool(selected & set(tokens)))]
     if st.session_state.stakeholder_filter:
-        filtered = filtered[
-            filtered["Filtering-Contributors-Categories"].apply(
-                lambda cell: any(s in extract_tokens(cell) for s in st.session_state.stakeholder_filter)
-            )
-        ]
+        selected = set(st.session_state.stakeholder_filter)
+        filtered = filtered[filtered["stakeholder_tokens"].apply(lambda tokens: bool(selected & set(tokens)))]
     return filtered
 
-# find options
+# Compute filtered options for sidebar
 filtered_for_options = filter_df()
 
 category_options = sorted(filtered_for_options["Category"].dropna().unique())
@@ -82,19 +93,19 @@ st.session_state.category_filter = [c for c in st.session_state.category_filter 
 subcategory_options = sorted(filtered_for_options["Sub-Category"].dropna().unique())
 st.session_state.subcategory_filter = [sc for sc in st.session_state.subcategory_filter if sc in subcategory_options]
 
-location_options = sorted({loc for cell in filtered_for_options["Location Identified"] for loc in extract_tokens(cell)})
+location_options = sorted({loc for tokens in filtered_for_options["location_tokens"] for loc in tokens})
 st.session_state.location_filter = [l for l in st.session_state.location_filter if l in location_options]
 
-stakeholder_options = sorted({s for cell in filtered_for_options["Filtering-Contributors-Categories"] for s in extract_tokens(cell)})
+stakeholder_options = sorted({s for tokens in filtered_for_options["stakeholder_tokens"] for s in tokens})
 st.session_state.stakeholder_filter = [s for s in st.session_state.stakeholder_filter if s in stakeholder_options]
 
-# multiselect
+# Sidebar multiselects
 category_filter = st.sidebar.multiselect("Category", options=category_options, key="category_filter")
 subcategory_filter = st.sidebar.multiselect("Subcategory", options=subcategory_options, key="subcategory_filter")
 location_filter = st.sidebar.multiselect("Location Identified", options=location_options, key="location_filter")
 stakeholder_filter = st.sidebar.multiselect("Contributor/Owner Category", options=stakeholder_options, key="stakeholder_filter")
 
-# filter for display
+# Filter for display
 filtered = filter_df()
 
 tab1, tab2 = st.tabs(["Dashboard View", "Initiatives View"])
@@ -112,7 +123,6 @@ with tab1:
             else:
                 st.write(f"Missing image: {img_id}.png")
 
-
 with tab2:
     st.header("Initiatives Overview")
     st.write("---")
@@ -123,16 +133,11 @@ with tab2:
         display_cols = ["ID", "Updated Initiative", "Category", "Location Identified"]
         filtered_subset = filtered[display_cols].copy()
 
-        #  newline characters with <br> for HTML line breaks
-        filtered_subset["Updated Initiative"] = filtered_subset["Updated Initiative"].str.replace("\n", "<br>")
-
-        # convert df to html
-        st.markdown(
-            filtered_subset.to_html(index=False, table_id="custom_table", escape=False), 
-            unsafe_allow_html=True
-        )
+        # --- Cached HTML ---
+        html_table = render_initiatives_html(filtered_subset)
+        st.markdown(html_table, unsafe_allow_html=True)
         
-        # control column widths and allow text wrapping
+        # Control column widths and allow text wrapping
         st.markdown("""
         <style>
         /* Adjust column widths */
